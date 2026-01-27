@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection } = require("discord.js")
+const { Client, GatewayIntentBits, Collection, Events } = require("discord.js")
 const fs = require("fs")
 const path = require("path")
 
@@ -38,8 +38,8 @@ client.on("messageCreate", message => {
     command.execute(message, args);
 });
 
-client.once("ready", () => {
-    console.log(`ログイン完了しました。: ${client.user.tag}`);
-});
+client.once(Events.ClientReady, c => {
+    console.log(`ログインしました。: ${c.user.tag}`);
+})
 
-client.login("TOKEN");
+client.login("");
