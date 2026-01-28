@@ -1,42 +1,52 @@
-const { SlashCommandBuilder, AttachmentBuilder } = require("discord.js");
-const QRCode = require("qrcode");
+const {
+  SlashCommandBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder,
+  AttachmentBuilder
+} = require("discord.js");
+
+const { generateQRCode } = require("../utils/qrcode");
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("qr")
-    .setDescription("テキストやURLをQRコードに変換します")
-    .addStringOption(option =>
-      option
-        .setName("text")
-        .setDescription("QRコードにする文字列 / URL")
-        .setRequired(true)
-    ),
+    .setDescription("フォームから入力してQRコードを作成します"),
 
+  // /qr 実行時
   async execute(interaction) {
-    const text = interaction.options.getString("text");
+    const modal = new ModalBuilder()
+      .setCustomId("qrModal")
+      .setTitle("QRコード作成");
 
-    try {
-      // QRコードを Buffer として生成
-      const qrBuffer = await QRCode.toBuffer(text, {
-        type: "png",
-        width: 512,
-        errorCorrectionLevel: "H"
-      });
+    const textInput = new TextInputBuilder()
+      .setCustomId("qrText")
+      .setLabel("QRコードにする文章 / URL")
+      .setStyle(TextInputStyle.Paragraph)
+      .setPlaceholder("https://example.com")
+      .setRequired(true)
+      .setMaxLength(1000);
 
-      const attachment = new AttachmentBuilder(qrBuffer, {
-        name: "qrcode.png"
-      });
+    const row = new ActionRowBuilder().addComponents(textInput);
+    modal.addComponents(row);
 
-      await interaction.reply({
-        content: "📱 QRコードを生成しました",
-        files: [attachment]
-      });
-    } catch (error) {
-      console.error(error);
-      await interaction.reply({
-        content: "QRコードの生成に失敗しました",
-        ephemeral: true
-      });
-    }
+    await interaction.showModal(modal);
+  },
+
+  // フォーム送信時
+  async modalSubmit(interaction) {
+    const text = interaction.fields.getTextInputValue("qrText");
+
+    const qrBuffer = await generateQRCode(text);
+
+    const attachment = new AttachmentBuilder(qrBuffer, {
+      name: "qrcode.png"
+    });
+
+    await interaction.reply({
+      content: "📱 QRコードを生成しました",
+      files: [attachment]
+    });
   }
 };

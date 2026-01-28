@@ -11,7 +11,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 
-/* ===== Client を最初に作る ===== */
+/* ===== Client ===== */
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
@@ -31,7 +31,7 @@ for (const file of commandFiles) {
   commands.push(command.data.toJSON());
 }
 
-/* ===== 起動完了 & 自動登録 ===== */
+/* ===== 起動 & 自動登録 ===== */
 client.once(Events.ClientReady, async c => {
   console.log(`ログイン完了: ${c.user.tag}`);
 
@@ -52,27 +52,44 @@ client.once(Events.ClientReady, async c => {
   }
 });
 
-/* ===== コマンド実行 ===== */
+/* ===== Interaction 処理（重要） ===== */
 client.on(Events.InteractionCreate, async interaction => {
-  if (!interaction.isChatInputCommand()) return;
 
-  const command = client.commands.get(interaction.commandName);
-  if (!command) return;
+  // ===== スラッシュコマンド =====
+  if (interaction.isChatInputCommand()) {
+    const command = client.commands.get(interaction.commandName);
+    if (!command) return;
 
-  try {
-    await command.execute(interaction);
-  } catch (error) {
-    console.error(error);
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({
-        content: "エラーが発生しました",
-        ephemeral: true
-      });
-    } else {
-      await interaction.reply({
-        content: "エラーが発生しました",
-        ephemeral: true
-      });
+    try {
+      await command.execute(interaction);
+    } catch (error) {
+      console.error(error);
+      if (!interaction.replied) {
+        await interaction.reply({
+          content: "エラーが発生しました",
+          ephemeral: true
+        });
+      }
+    }
+  }
+
+  // ===== モーダル送信 =====
+  if (interaction.isModalSubmit()) {
+    if (interaction.customId === "qrModal") {
+      const command = client.commands.get("qr");
+      if (!command?.modalSubmit) return;
+
+      try {
+        await command.modalSubmit(interaction);
+      } catch (error) {
+        console.error(error);
+        if (!interaction.replied) {
+          await interaction.reply({
+            content: "QRコード生成中にエラーが発生しました",
+            ephemeral: true
+          });
+        }
+      }
     }
   }
 });
