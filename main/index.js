@@ -52,44 +52,32 @@ client.once(Events.ClientReady, async c => {
   }
 });
 
-/* ===== Interaction 処理（重要） ===== */
+/* ===== Interaction 処理（完全対応） ===== */
 client.on(Events.InteractionCreate, async interaction => {
-
-  // ===== スラッシュコマンド =====
-  if (interaction.isChatInputCommand()) {
-    const command = client.commands.get(interaction.commandName);
-    if (!command) return;
-
-    try {
+  try {
+    /* ===== スラッシュコマンド ===== */
+    if (interaction.isChatInputCommand()) {
+      const command = client.commands.get(interaction.commandName);
+      if (!command) return;
       await command.execute(interaction);
-    } catch (error) {
-      console.error(error);
-      if (!interaction.replied) {
-        await interaction.reply({
-          content: "エラーが発生しました",
-          ephemeral: true
-        });
-      }
     }
-  }
 
-  // ===== モーダル送信 =====
-  if (interaction.isModalSubmit()) {
-    if (interaction.customId === "qrModal") {
-      const command = client.commands.get("qr");
-      if (!command?.modalSubmit) return;
-
-      try {
-        await command.modalSubmit(interaction);
-      } catch (error) {
-        console.error(error);
-        if (!interaction.replied) {
-          await interaction.reply({
-            content: "QRコード生成中にエラーが発生しました",
-            ephemeral: true
-          });
+    /* ===== モーダル送信（汎用） ===== */
+    if (interaction.isModalSubmit()) {
+      for (const command of client.commands.values()) {
+        if (typeof command.modalSubmit === "function") {
+          await command.modalSubmit(interaction);
         }
       }
+    }
+  } catch (error) {
+    console.error("Interaction error:", error);
+
+    if (!interaction.replied) {
+      await interaction.reply({
+        content: "❌ 処理中にエラーが発生しました",
+        ephemeral: true
+      });
     }
   }
 });
